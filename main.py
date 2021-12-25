@@ -128,7 +128,7 @@ def sub_search(sub_name):
             # print('gname: ', gname, end='\t')
             cname = j.find('span', {'class': 'text-theme-0 tfs14'}).text.strip()
             # print('cname: ', cname)
-            if gname == '묘쿄쿄':
+            if gname == sub_name:
                 target_list.append(cname)
 
         if len(target_list) > 0:
