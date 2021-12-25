@@ -100,10 +100,10 @@ def enlist(guild_name):
     print('정리 대상: ', filter_list)
     # print('레벨컷 만족: ', pass_list)
 
-    sub_search(filter_list)
+    sub_search(subname, filter_list)
 
 
-def sub_search(sub_name):
+def sub_search(sub_name, member_list, hasfiltered=True):
     if sub_name is None:
         return
 
@@ -111,7 +111,7 @@ def sub_search(sub_name):
     options.add_argument("--headless")  # 창 숨기는 옵션 추가
     driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver', options=options)
 
-    for i in filter_list:
+    for i in member_list:
         driver.get(url + i)
         driver.find_element(By.XPATH,
                             '/ html / body / div[6] / div / div[2] / div / div / div[2] / div[2] / div / div[2] / div[1] / label[6]').click()
