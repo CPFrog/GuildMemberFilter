@@ -1,4 +1,5 @@
 import requests
+import time
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
@@ -8,7 +9,7 @@ from bs4 import BeautifulSoup
 import chromedriver_autoinstaller
 
 guild_url = "https://loawa.com/guild/"
-url = "https://lostark.game.onstove.com/Profile/Character/"
+url = "https://loawa.com/char/"
 pass_list = []
 filter_list = []
 
@@ -30,8 +31,10 @@ class MyApp(QWidget):
 
         self.gname_text = QLineEdit()
         self.lvthres_text = QLineEdit()
+        self.lvthres_text.returnPressed.connect(self.button_event)
         self.subg_text = QLineEdit()
         self.maxsub_text = QLineEdit()
+        self.lvthres_text.returnPressed.connect(self.button_event)
         grid.addWidget(self.gname_text, 0, 1)
         grid.addWidget(self.lvthres_text, 1, 1)
         grid.addWidget(self.subg_text, 2, 1)
@@ -58,22 +61,21 @@ class MyApp(QWidget):
         self.close()
 
     def keyPressEvent(self, e):
-        if e.key() == Qt.Key_Enter:
-            self.button_event()
-        elif e.key() == Qt.Key_Escape:
+        if e.key() == Qt.Key_Escape:
             self.close()
 
 
 def enlist(guild_name):
     options = webdriver.ChromeOptions()  # 옵션 생성
-    options.add_argument("headless")  # 창 숨기는 옵션 추가
+    options.add_argument("--headless")  # 창 숨기는 옵션 추가
+    global chrome_ver
     chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]  # 크롬 드라이버 버전 확인
 
     try:
-        driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver')
+        driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver', options=options)
     except:
         chromedriver_autoinstaller.install(True)
-        driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver')
+        driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver', options=options)
 
     driver.implicitly_wait(10)
 
@@ -83,25 +85,59 @@ def enlist(guild_name):
     member_list = guild_soup.find_all('table', {'class': 'tfs13'})
     driver.quit()
 
-    print(member_list)
+    # print(member_list)
 
     for i in member_list:
         cname = i.find('span', {'class': 'text-theme-0 tfs13'}).text.strip()
         clevel = float(i.find('span', {'class': 'text-grade5 tfs13'}).text)
         dif = clevel - threshold
-        print(cname, ': ', dif, end='\t')
+        # print(cname, ': ', dif, end='\t')
         if dif < 0:
             filter_list.append(cname)
         else:
             pass_list.append(cname)
 
     print('정리 대상: ', filter_list)
-    print('레벨컷 만족: ', pass_list)
+    # print('레벨컷 만족: ', pass_list)
+
+    sub_search(filter_list)
 
 
 def sub_search(sub_name):
     if sub_name is None:
         return
+
+    options = webdriver.ChromeOptions()  # 옵션 생성
+    options.add_argument("--headless")  # 창 숨기는 옵션 추가
+    driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver', options=options)
+
+    for i in filter_list:
+        driver.get(url + i)
+        driver.find_element(By.XPATH,
+                            '/ html / body / div[6] / div / div[2] / div / div / div[2] / div[2] / div / div[2] / div[1] / label[6]').click()
+        time.sleep(3)
+
+        char_soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+        char_list = char_soup.find_all('table', {'class': 'tfs14'})
+        # print(char_list)
+
+        target_list = []
+        for j in char_list:
+            gname = j.find('span', {'class': 'tfs14 text-grade2'}).text.strip()
+            # print('gname: ', gname, end='\t')
+            cname = j.find('span', {'class': 'text-theme-0 tfs14'}).text.strip()
+            # print('cname: ', cname)
+            if gname == '묘쿄쿄':
+                target_list.append(cname)
+
+        if len(target_list) > 0:
+            print(i, ': ', target_list)
+
+    # TODO: 정리 대상 아닌 사람 중 부캐 길드 n개 이상 가입 시킨 사람 리스트 추출.
+    # TODO: 출력 방식을 터미널(콘솔)창이 아닌 .txt 파일이 되도록.
+
+    driver.quit()
 
 
 if __name__ == '__main__':
