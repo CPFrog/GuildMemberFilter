@@ -64,6 +64,9 @@ class MyApp(QWidget):
         if e.key() == Qt.Key_Escape:
             self.close()
 
+    def closeEvent(self, e):
+        QMessageBox.information(self, '완료 알림', '모든 검색 작업이 완료 되었습니다.')
+
 
 def enlist(guild_name):
     options = webdriver.ChromeOptions()  # 옵션 생성
@@ -98,7 +101,7 @@ def enlist(guild_name):
             pass_list.append(cname)
     global f
     f = open(f'{guild_name} 길드 정리 명단.txt', 'w')
-    f.write(f'--[밤잠] 템 레벨 {clevel} 미만 길드원 명단--\n')
+    f.write(f'--[밤잠] 템 레벨 {threshold} 미만 길드원 명단--\n')
     cnt = 0
     for s in filter_list:
         f.write(f'{s}\t')
@@ -111,9 +114,11 @@ def enlist(guild_name):
     # print('레벨컷 만족: ', pass_list)
 
     sub_search(subname, filter_list, max_subchar)
+    f.write('\n')
     sub_search(subname, pass_list, max_subchar, has_filtered=False)
 
     f.close()
+
 
 def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
     if sub_name is None:
@@ -165,7 +170,6 @@ def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
                 f.write('\n')
 
     driver.quit()
-
 
 
 if __name__ == '__main__':
