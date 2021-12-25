@@ -1,7 +1,7 @@
 import requests
 import sys
 from PyQt5.QtWidgets import *
-from PyQt5 import uic
+from PyQt5.QtCore import Qt
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
@@ -9,17 +9,14 @@ import chromedriver_autoinstaller
 
 guild_url = "https://loawa.com/guild/"
 url = "https://lostark.game.onstove.com/Profile/Character/"
-guild = ""
-subname = ""
-threshold = 0
-max_subchar = 0
+pass_list = []
+filter_list = []
 
 
 class MyApp(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
-
 
     def initUI(self):
         self.setWindowTitle('로스트아크 길드원 템 레벨 검사기')
@@ -47,10 +44,10 @@ class MyApp(QWidget):
         self.show()
 
     def button_event(self):
-        nonlocal guild
-        nonlocal subname
-        nonlocal threshold
-        nonlocal max_subchar
+        global guild
+        global subname
+        global threshold
+        global max_subchar
 
         guild = self.gname_text.text()
         threshold = int(self.lvthres_text.text())
@@ -58,6 +55,13 @@ class MyApp(QWidget):
         max_subchar = int(self.maxsub_text.text())
 
         enlist(guild)
+        self.close()
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Enter:
+            self.button_event()
+        elif e.key() == Qt.Key_Escape:
+            self.close()
 
 
 def enlist(guild_name):
@@ -80,14 +84,12 @@ def enlist(guild_name):
     driver.quit()
 
     print(member_list)
-    pass_list = []
-    filter_list = []
 
     for i in member_list:
         cname = i.find('span', {'class': 'text-theme-0 tfs13'}).text.strip()
         clevel = float(i.find('span', {'class': 'text-grade5 tfs13'}).text)
         dif = clevel - threshold
-        print(cname, ': ', dif)
+        print(cname, ': ', dif, end='\t')
         if dif < 0:
             filter_list.append(cname)
         else:
@@ -95,6 +97,11 @@ def enlist(guild_name):
 
     print('정리 대상: ', filter_list)
     print('레벨컷 만족: ', pass_list)
+
+
+def sub_search(sub_name):
+    if sub_name is None:
+        return
 
 
 if __name__ == '__main__':
