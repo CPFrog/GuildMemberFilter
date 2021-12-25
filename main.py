@@ -104,13 +104,13 @@ def enlist(guild_name):
     f.write(f'--[밤잠] 템 레벨 {threshold} 미만 길드원 명단--\n')
     cnt = 0
     for s in filter_list:
-        f.write(f'{s}\t')
+        f.write(f'{s}  ')
         cnt += 1
         if cnt == 5:
             f.write('\n')
             cnt = 0
     f.write('\n\n')
-    print('정리 대상: ', filter_list)
+    # print('정리 대상: ', filter_list)
     # print('레벨컷 만족: ', pass_list)
 
     sub_search(subname, filter_list, max_subchar)
@@ -130,10 +130,10 @@ def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
 
     if has_filtered:
         f.write('--[묘쿄쿄] 템렙 제한 미만 길드원 부캐 목록--\n')
-        print('렙제 걸린 멤버 부캐 목록')
+        # print('렙제 걸린 멤버 부캐 목록')
     else:
         f.write(f'--[묘쿄쿄] 부캐 {max_sub}개 이상 가입 길드원 목록--\n')
-        print(f'부캐{max_sub}개 이상 가입 길드원 목록')
+        # print(f'부캐{max_sub}개 이상 가입 길드원 목록')
     for i in member_list:
         driver.get(url + i)
         driver.find_element(By.XPATH,
@@ -154,19 +154,19 @@ def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
 
         if has_filtered:
             if len(target_list) > 0:
-                print(i, ': ', target_list)
+                # print(i, ': ', target_list)
 
                 f.write(f'{i}: ')
                 for s in target_list:
-                    f.write(f'{s}\t')
+                    f.write(f'{s}  ')
                 f.write('\n')
         else:
             if len(target_list) > max_sub:
-                print(i, ': ', target_list)
+                # print(i, ': ', target_list)
 
                 f.write(f'{i}: ')
                 for s in target_list:
-                    f.write(f'{s}\t')
+                    f.write(f'{s}  ')
                 f.write('\n')
 
     driver.quit()
