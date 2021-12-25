@@ -96,14 +96,26 @@ def enlist(guild_name):
             filter_list.append(cname)
         else:
             pass_list.append(cname)
-
+    global f
+    f = open(f'{guild_name} 길드 정리 명단.txt', 'w')
+    f.write(f'--[밤잠] 템 레벨 {clevel} 미만 길드원 명단--\n')
+    cnt = 0
+    for s in filter_list:
+        f.write(f'{s}\t')
+        cnt += 1
+        if cnt == 5:
+            f.write('\n')
+            cnt = 0
+    f.write('\n\n')
     print('정리 대상: ', filter_list)
     # print('레벨컷 만족: ', pass_list)
 
-    sub_search(subname, filter_list)
+    sub_search(subname, filter_list, max_subchar)
+    sub_search(subname, pass_list, max_subchar, has_filtered=False)
 
+    f.close()
 
-def sub_search(sub_name, member_list, hasfiltered=True):
+def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
     if sub_name is None:
         return
 
@@ -111,6 +123,12 @@ def sub_search(sub_name, member_list, hasfiltered=True):
     options.add_argument("--headless")  # 창 숨기는 옵션 추가
     driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver', options=options)
 
+    if has_filtered:
+        f.write('--[묘쿄쿄] 템렙 제한 미만 길드원 부캐 목록--\n')
+        print('렙제 걸린 멤버 부캐 목록')
+    else:
+        f.write(f'--[묘쿄쿄] 부캐 {max_sub}개 이상 가입 길드원 목록--\n')
+        print(f'부캐{max_sub}개 이상 가입 길드원 목록')
     for i in member_list:
         driver.get(url + i)
         driver.find_element(By.XPATH,
@@ -120,29 +138,37 @@ def sub_search(sub_name, member_list, hasfiltered=True):
         char_soup = BeautifulSoup(driver.page_source, 'html.parser')
 
         char_list = char_soup.find_all('table', {'class': 'tfs14'})
-        # print(char_list)
 
         target_list = []
+
         for j in char_list:
             gname = j.find('span', {'class': 'tfs14 text-grade2'}).text.strip()
-            # print('gname: ', gname, end='\t')
             cname = j.find('span', {'class': 'text-theme-0 tfs14'}).text.strip()
-            # print('cname: ', cname)
             if gname == sub_name:
                 target_list.append(cname)
 
-        if len(target_list) > 0:
-            print(i, ': ', target_list)
+        if has_filtered:
+            if len(target_list) > 0:
+                print(i, ': ', target_list)
 
-    # TODO: 정리 대상 아닌 사람 중 부캐 길드 n개 이상 가입 시킨 사람 리스트 추출.
-    # TODO: 출력 방식을 터미널(콘솔)창이 아닌 .txt 파일이 되도록.
+                f.write(f'{i}: ')
+                for s in target_list:
+                    f.write(f'{s}\t')
+                f.write('\n')
+        else:
+            if len(target_list) > max_sub:
+                print(i, ': ', target_list)
+
+                f.write(f'{i}: ')
+                for s in target_list:
+                    f.write(f'{s}\t')
+                f.write('\n')
 
     driver.quit()
+
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MyApp()
     sys.exit(app.exec_())
-
-print('출력: ', guild, threshold, subname, max_subchar)
