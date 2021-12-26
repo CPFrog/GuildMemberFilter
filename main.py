@@ -9,8 +9,6 @@ import chromedriver_autoinstaller
 
 guild_url = "https://loawa.com/guild/"
 url = "https://loawa.com/char/"
-pass_list = []
-filter_list = []
 
 
 class MyApp(QWidget):
@@ -19,7 +17,7 @@ class MyApp(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('로스트아크 길드원 템 레벨 검사기')
+        self.setWindowTitle('로스트아크 길드 템 레벨 검사기 v1.1')
         grid = QGridLayout()
         self.setLayout(grid)
 
@@ -29,11 +27,13 @@ class MyApp(QWidget):
         grid.addWidget(QLabel('최대 부캐 수:'), 3, 0)
 
         self.gname_text = QLineEdit()
+        self.gname_text.returnPressed.connect(self.button_event)
         self.lvthres_text = QLineEdit()
         self.lvthres_text.returnPressed.connect(self.button_event)
         self.subg_text = QLineEdit()
+        self.subg_text.returnPressed.connect(self.button_event)
         self.maxsub_text = QLineEdit()
-        self.lvthres_text.returnPressed.connect(self.button_event)
+        self.maxsub_text.returnPressed.connect(self.button_event)
         grid.addWidget(self.gname_text, 0, 1)
         grid.addWidget(self.lvthres_text, 1, 1)
         grid.addWidget(self.subg_text, 2, 1)
@@ -52,13 +52,23 @@ class MyApp(QWidget):
         global max_subchar
 
         guild = self.gname_text.text()
-        threshold = int(self.lvthres_text.text())
-        subname = self.subg_text.text()
-        max_subchar = int(self.maxsub_text.text())
+        if guild != '':
+            threshold_t = self.lvthres_text.text()
+            if threshold_t == '':
+                threshold = 1500
+            else:
+                threshold = int(threshold_t)
+            subname = self.subg_text.text()
+            if self.maxsub_text.text() != '':
+                max_subchar = int(self.maxsub_text.text())
+            else:
+                max_subchar = 1
 
-        enlist(guild)
-        QMessageBox.information(self, '완료 알림', '모든 검색 작업이 완료 되었습니다.')
-        self.close()
+            enlist(guild)
+            QMessageBox.information(self, '완료 알림', '모든 검색 작업이 완료 되었습니다.')
+
+        else:
+            QMessageBox.critical(self, '길드명 미입력', '본캐 길드명 입력은 필수 사항입니다.')
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
@@ -90,6 +100,8 @@ def enlist(guild_name):
 
     # print(member_list)
 
+    filter_list=[]
+    pass_list=[]
     for i in member_list:
         cname = i.find('span', {'class': 'text-theme-0 tfs13'}).text.strip()
         clevel = float(i.find('span', {'class': 'text-grade5 tfs13'}).text)
@@ -121,7 +133,7 @@ def enlist(guild_name):
 
 
 def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
-    if sub_name is None:
+    if sub_name == '':
         return
 
     options = webdriver.ChromeOptions()  # 옵션 생성
