@@ -101,7 +101,7 @@ def enlist(guild_name):
             pass_list.append(cname)
     global f
     f = open(f'{guild_name} 길드 정리 명단.txt', 'w')
-    f.write(f'--[밤잠] 템 레벨 {threshold} 미만 길드원 명단--\n')
+    f.write(f'--[{guild_name}] 템 레벨 {threshold} 미만 길드원 명단--\n')
     cnt = 0
     for s in filter_list:
         f.write(f'{s}  ')
@@ -129,10 +129,10 @@ def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
     driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver', options=options)
 
     if has_filtered:
-        f.write('--[묘쿄쿄] 템렙 제한 미만 길드원 부캐 목록--\n')
+        f.write(f'--[{sub_name}] 템렙 제한 미만 길드원 부캐 목록--\n')
         # print('렙제 걸린 멤버 부캐 목록')
     else:
-        f.write(f'--[묘쿄쿄] 부캐 {max_sub}개 이상 가입 길드원 목록--\n')
+        f.write(f'--[{sub_name}] 부캐 {max_sub}개 이상 가입 길드원 목록--\n')
         # print(f'부캐{max_sub}개 이상 가입 길드원 목록')
     for i in member_list:
         driver.get(url + i)
