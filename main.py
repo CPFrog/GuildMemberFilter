@@ -1,4 +1,3 @@
-import requests
 import time
 import sys
 from PyQt5.QtWidgets import *
@@ -58,6 +57,7 @@ class MyApp(QWidget):
         max_subchar = int(self.maxsub_text.text())
 
         enlist(guild)
+        QMessageBox.information(self, '완료 알림', '모든 검색 작업이 완료 되었습니다.')
         self.close()
 
     def keyPressEvent(self, e):
@@ -65,7 +65,7 @@ class MyApp(QWidget):
             self.close()
 
     def closeEvent(self, e):
-        QMessageBox.information(self, '완료 알림', '모든 검색 작업이 완료 되었습니다.')
+        QMessageBox.information(self, '프로그램 종료 알림', '프로그램이 종료됩니다.')
 
 
 def enlist(guild_name):
