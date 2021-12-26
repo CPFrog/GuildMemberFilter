@@ -17,7 +17,7 @@ class MyApp(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('로스트아크 길드 템 레벨 검사기 v1.1.1')
+        self.setWindowTitle('로스트아크 길드 템 레벨 검사기 v1.1.1 -by CP개구링')
         grid = QGridLayout()
         self.setLayout(grid)
 
