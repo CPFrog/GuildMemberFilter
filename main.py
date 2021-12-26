@@ -17,7 +17,7 @@ class MyApp(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('로스트아크 길드 템 레벨 검사기 v1.1')
+        self.setWindowTitle('로스트아크 길드 템 레벨 검사기 v1.1.1')
         grid = QGridLayout()
         self.setLayout(grid)
 
@@ -144,7 +144,7 @@ def sub_search(sub_name, member_list, max_sub=100, has_filtered=True):
         f.write(f'--[{sub_name}] 템렙 제한 미만 길드원 부캐 목록--\n')
         # print('렙제 걸린 멤버 부캐 목록')
     else:
-        f.write(f'--[{sub_name}] 부캐 {max_sub}개 이상 가입 길드원 목록--\n')
+        f.write(f'--[{sub_name}] 부캐 {max_sub}개 초과 가입 길드원 목록--\n')
         # print(f'부캐{max_sub}개 이상 가입 길드원 목록')
     for i in member_list:
         driver.get(url + i)
