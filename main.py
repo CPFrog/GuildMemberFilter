@@ -138,7 +138,7 @@ def sub_search(subnames, member_list, has_filtered=True):
     length = len(subnames)
     for idx in range(length):
         sub_name = subnames[idx].strip()
-        max_sub = int(maxsubs[i].strip())
+        max_sub = int(maxsubs[idx].strip())
         if has_filtered:
             f.write(f'--[{sub_name}] 템렙 제한 미만 길드원 부캐 목록--\n')
             # print('렙제 걸린 멤버 부캐 목록')
@@ -152,7 +152,7 @@ def sub_search(subnames, member_list, has_filtered=True):
             driver.get(url + i)
             driver.find_element(By.XPATH,
                                 '/ html / body / div[6] / div / div[2] / div / div / div[2] / div[2] / div / div[2] / div[1] / label[6]').click()
-            # time.sleep(3)
+            time.sleep(2)
 
             char_soup = BeautifulSoup(driver.page_source, 'html.parser')
 
@@ -174,7 +174,6 @@ def sub_search(subnames, member_list, has_filtered=True):
                     for s in target_list:
                         f.write(f'{s}  ')
                     f.write('\n')
-                    f.flush()
             else:
                 if len(target_list) > max_sub:
                     # print(i, ': ', target_list)
@@ -183,7 +182,8 @@ def sub_search(subnames, member_list, has_filtered=True):
                     for s in target_list:
                         f.write(f'{s}  ')
                     f.write('\n')
-                    f.flush()
+            f.write('\n')
+            f.flush()
 
     driver.quit()
 
