@@ -18,7 +18,7 @@ class MyApp(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('로스트아크 길드 템 레벨 검사기 v1.2 by CP개구링')
+        self.setWindowTitle('로스트아크 길드 템 레벨 검사기 v1.2.1 by CP개구링')
         grid = QGridLayout()
         self.setLayout(grid)
 
@@ -48,8 +48,8 @@ class MyApp(QWidget):
 
     def button_event(self):
         global guild
-        global subnames
         global threshold
+        global subnames
         global maxsubs
 
         guild = self.gname_text.text()
@@ -58,7 +58,13 @@ class MyApp(QWidget):
             if threshold_t == '':
                 threshold = 1500
             else:
-                threshold = int(threshold_t.strip())
+                if threshold_t.find('-') != -1:
+                    temp = threshold_t.split('-')
+                    threshold = int(temp[0].strip())
+                    ignore = int(temp[1].strip())
+                else:
+                    ignore = 0
+
             subname = self.subg_text.text()
             subnames = subname.split(',')
             maxsubs = self.maxsub_text.text().split(',')
@@ -69,9 +75,9 @@ class MyApp(QWidget):
             elif len(subnames) == 1:
                 if maxsubs[0] == '':
                     maxsubs[0] = '1'
-
-            enlist(guild)
-            QMessageBox.information(self, '완료 알림', '모든 검색 작업이 완료 되었습니다.')
+            start_time = time.time()
+            enlist(guild, ignore)
+            QMessageBox.information(self, '완료 알림', f'모든 검색 작업이 완료 되었습니다.\n소요시간: {time.time() - start_time:.2f}초')
 
         else:
             QMessageBox.critical(self, '길드명 미입력', '본캐 길드명 입력은 필수 사항입니다.')
@@ -84,7 +90,7 @@ class MyApp(QWidget):
         QMessageBox.information(self, '프로그램 종료 알림', '프로그램이 종료됩니다.')
 
 
-def enlist(guild_name):
+def enlist(guild_name, ignore):
     driver = browser_driver()
     driver.implicitly_wait(3)
 
@@ -104,7 +110,8 @@ def enlist(guild_name):
         dif = clevel - threshold
         # print(cname, ': ', dif, end='\t')
         if dif < 0:
-            filter_list.append(cname)
+            if clevel >= ignore:
+                filter_list.append(cname)
         else:
             pass_list.append(cname)
     global f
@@ -117,7 +124,7 @@ def enlist(guild_name):
         if cnt == 5:
             f.write('\n')
             cnt = 0
-    f.write('\n\n')
+    f.write('\n\n\n')
     f.flush()
     # print('정리 대상: ', filter_list)
     # print('레벨컷 만족: ', pass_list)
@@ -140,7 +147,7 @@ def sub_search(subnames, member_list, has_filtered=True):
         sub_name = subnames[idx].strip()
         max_sub = int(maxsubs[idx].strip())
         if has_filtered:
-            f.write(f'--[{sub_name}] 템렙 제한 미만 길드원 부캐 목록--\n')
+            f.write(f'--[{sub_name}] 템렙 {threshold} 미만 길드원 부캐 목록--\n')
             # print('렙제 걸린 멤버 부캐 목록')
         else:
             f.write(f'--[{sub_name}] 부캐 {max_sub}개 초과 가입 길드원 목록--\n')
@@ -182,9 +189,11 @@ def sub_search(subnames, member_list, has_filtered=True):
                     for s in target_list:
                         f.write(f'{s}  ')
                     f.write('\n')
-            f.write('\n')
             f.flush()
-
+        f.write('\n')
+        f.flush()
+    f.write('\n')
+    f.flush()
     driver.quit()
 
 
@@ -200,10 +209,10 @@ def browser_driver():
         options = webdriver.EdgeOptions()  # 옵션 생성
         options.add_argument("--headless")  # 창 숨기는 옵션 추가
         try:
-            driver = webdriver.Edge(f'./{driver_ver}/edgedriver', options=options)
+            driver = webdriver.Edge(f'./{driver_ver}/msedgedriver', options=options)
         except:
             edgedriver_autoinstaller.install(True)
-            driver = webdriver.Edge(f'./{driver_ver}/edgedriver', options=options)
+            driver = webdriver.Edge(f'./{driver_ver}/msedgedriver', options=options)
 
     elif browser == "chrome":
         options = webdriver.ChromeOptions()  # 옵션 생성
