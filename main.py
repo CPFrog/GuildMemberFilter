@@ -96,11 +96,8 @@ def enlist(guild_name, ignore):
 
     driver.get(guild_url + guild_name)
     guild_soup = BeautifulSoup(driver.page_source, 'html.parser')
-    # print(guild_soup)
     member_list = guild_soup.find_all('table', {'class': 'tfs13'})
     driver.quit()
-
-    # print(member_list)
 
     filter_list = []
     pass_list = []
@@ -108,7 +105,6 @@ def enlist(guild_name, ignore):
         cname = i.find('span', {'class': 'text-theme-0 tfs13'}).text.strip()
         clevel = float(i.find('span', {'class': 'text-grade5 tfs13'}).text)
         dif = clevel - threshold
-        # print(cname, ': ', dif, end='\t')
         if dif < 0:
             if clevel >= ignore:
                 filter_list.append(cname)
@@ -126,8 +122,6 @@ def enlist(guild_name, ignore):
             cnt = 0
     f.write('\n\n\n')
     f.flush()
-    # print('정리 대상: ', filter_list)
-    # print('레벨컷 만족: ', pass_list)
 
     sub_search(subnames, filter_list)
     f.write('\n')
@@ -148,10 +142,8 @@ def sub_search(subnames, member_list, has_filtered=True):
         max_sub = int(maxsubs[idx].strip())
         if has_filtered:
             f.write(f'--[{sub_name}] 템렙 {threshold} 미만 길드원 부캐 목록--\n')
-            # print('렙제 걸린 멤버 부캐 목록')
         else:
             f.write(f'--[{sub_name}] 부캐 {max_sub}개 초과 가입 길드원 목록--\n')
-            # print(f'부캐{max_sub}개 이상 가입 길드원 목록')
 
         f.flush()
 
@@ -175,7 +167,6 @@ def sub_search(subnames, member_list, has_filtered=True):
 
             if has_filtered:
                 if len(target_list) > 0:
-                    # print(i, ': ', target_list)
 
                     f.write(f'{i}: ')
                     for s in target_list:
@@ -183,7 +174,6 @@ def sub_search(subnames, member_list, has_filtered=True):
                     f.write('\n')
             else:
                 if len(target_list) > max_sub:
-                    # print(i, ': ', target_list)
 
                     f.write(f'{i}: ')
                     for s in target_list:
