@@ -110,7 +110,10 @@ def enlist(guild_name, threshold, ignore, file):
     pool = Pool(processes=8)
     func = partial(classify, threshold=threshold, ignore=ignore, file=f)
     filter_list, pass_list = pool.map(func, member_list)
+    pool.close()
+    pool.join()
 
+    pool = Pool(processes=8)
     # sub_search(subnames, threshold, filter_list)
     func = partial(sub_search, threshold=threshold, subnames=subnames, file=f)
     pool.map(func, filter_list)
