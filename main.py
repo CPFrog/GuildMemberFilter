@@ -109,6 +109,7 @@ def enlist(guild_name, threshold, ignore, file):
 
     pool = Pool(processes=8)
     func = partial(classify, threshold=threshold, ignore=ignore, file=f)
+    # TypeError: cannot pickle '_io.TextIOWrapper' object
     filter_list, pass_list = pool.map(func, member_list)
     pool.close()
     pool.join()
