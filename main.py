@@ -6,13 +6,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from multiprocessing import Pool, Queue
+import multiprocessing
 from functools import partial
 from bs4 import BeautifulSoup
 import chromedriver_autoinstaller
 import edgedriver_autoinstaller
-
-guild_url = "https://loawa.com/guild/"
-url = "https://loawa.com/char/"
 
 
 class MyApp(QWidget):
@@ -54,34 +52,22 @@ class MyApp(QWidget):
         self.show()
 
     def button_event(self):
-        global subnames
-        global maxsubs
-
         guild = self.gname_text.text()
-        if guild != '':
+        if not guild == '':
             threshold_t = self.lvthres_text.text()
             ignore_t = self.lvignore_text.text()
-            if threshold_t == '':
-                threshold = 1500
-            else:
-                threshold = int(threshold_t.strip())
-            if ignore_t == '':
-                ignore = 0
-            else:
-                ignore = int(ignore_t.strip())
+            subname_list = self.subg_text.text().split(',')
+            maxsub_list = self.maxsub_text.text().split(',')
+            result_code, threshold, ignore, subnames, maxsubs = getValues(threshold_t, ignore_t, subname_list,
+                                                                          maxsub_list)
 
-            subnames = self.subg_text.text().split(',')
-            maxsubs = self.maxsub_text.text().split(',')
-            if len(subnames) > 1:
-                if len(subnames) != len(maxsubs):
-                    QMessageBox.critical(self, '오류', '부캐 길드가 2개 이상인 경우 각 길드의 허용 부캐 갯수도 각각 지정하셔야 합니다.')
-                    return
-            elif len(subnames) == 1:
-                if maxsubs[0] == '':
-                    maxsubs[0] = '1'
+            if not result_code:
+                QMessageBox.critical(self, '오류', '부캐 길드가 2개 이상인 경우 각 길드의 허용 부캐 갯수도 각각 지정하셔야 합니다.')
+                return
+
             start_time = time.time()
             f = open(f'{guild} 길드 정리 명단.txt', 'w')
-            enlist(guild, threshold, ignore, f)
+            enlist(guild, threshold, ignore, subnames, maxsubs, f)
             QMessageBox.information(self, '완료 알림', f'모든 검색 작업이 완료 되었습니다.\n소요시간: {time.time() - start_time:.2f}초')
 
         else:
@@ -95,22 +81,48 @@ class MyApp(QWidget):
         QMessageBox.information(self, '프로그램 종료 알림', '프로그램이 종료됩니다.')
 
 
-def enlist(guild_name, threshold, ignore, file):
+def getValues(threshold_t, ignore_t, subg_list, maxsub_list):
+    if threshold_t == '':
+        threshold = 1500
+    else:
+        threshold = int(threshold_t.strip())
+    if ignore_t == '':
+        ignore = 0
+    else:
+        ignore = int(ignore_t.strip())
+
+    subguilds = []
+    for s in subg_list:
+        subguilds.append(s)
+
+    maxchar = []
+    for n in maxsub_list:
+        maxchar.append(n)
+
+    if len(subguilds) > 1:
+        if len(subguilds) != len(maxchar):
+            return False, None, None, None, None
+    elif len(subguilds) == 1:
+        if maxchar[0] == '':
+            maxchar[0] = '1'
+    return True, threshold, ignore, subguilds, maxchar
+
+
+def enlist(guild_name, threshold, ignore, subguilds, maxchar, file):
     f = file
     driver = browser_driver()
-
+    guild_url = "https://loawa.com/guild/"
     driver.get(guild_url + guild_name)
     guild_soup = BeautifulSoup(driver.page_source, 'html.parser')
     member_list = guild_soup.find_all('table', {'class': 'tfs13'})
     driver.quit()
 
     f.write(f'--[{guild_name}] 템 레벨 {threshold} 미만 길드원 명단--\n')
-
-    pool = Pool(processes=8)
-    filter_list = []
-    pass_list = []
+    manager = multiprocessing.Manager()
+    pool = Pool(processes=multiprocessing.cpu_count() * 2)
+    filter_list = manager.list()
+    pass_list = manager.list()
     func = partial(classify, threshold=threshold, ignore=ignore, filtered=filter_list, passed=pass_list)
-    # TypeError: cannot pickle '_io.TextIOWrapper' object
     pool.map(func, member_list)
     pool.close()
     pool.join()
@@ -133,11 +145,16 @@ def enlist(guild_name, threshold, ignore, file):
     f.write('\n\n')
     f.flush()
 
-    pool = Pool(processes=8)
+    subnames = manager.list()
+    for sub in subguilds:
+        subnames.append(sub)
+    maxnums = manager.list()
+    for num in maxchar:
+        maxnums.append(num)
+    pool = Pool(processes=multiprocessing.cpu_count() * 2)
     # sub_search(subnames, threshold, filter_list)
-    q = Queue()
-    func = partial(sub_search, threshold=threshold, subnames=subnames, queue=q)
-    pool.map(func, filter_list)
+    func = partial(sub_search, threshold=threshold, subguilds=subnames, maxchar=maxnums)
+    q = pool.map(func, filter_list)
     pool.close()
     pool.join()
     while not q.empty():
@@ -146,8 +163,9 @@ def enlist(guild_name, threshold, ignore, file):
     f.write('\n')
     f.flush()
 
-    func = partial(sub_search, threshold=threshold, subnames=subnames, queue=q, has_filtered=False)
-    pool.map(func, pass_list)
+    pool = Pool(processes=multiprocessing.cpu_count() * 2)
+    func = partial(sub_search, threshold=threshold, subguilds=subnames, maxchar=maxnums, has_filtered=False)
+    q = pool.map(func, pass_list)
     pool.close()
     pool.join()
     while not q.empty():
@@ -162,23 +180,25 @@ def classify(raw_list, threshold, ignore, filtered, passed):
     for i in raw_list:
         cname = i.find('span', {'class': 'text-theme-0 tfs13'}).text.strip()
         clevel = float(i.find('span', {'class': 'text-grade5 tfs13'}).text)
-        dif = clevel - threshold
-        if dif < 0:
-            if clevel >= ignore:
+        if clevel >= ignore:
+            dif = clevel - threshold
+            if dif < 0:
                 filtered.append(cname)
-        else:
-            passed.append(cname)
+            else:
+                passed.append(cname)
 
 
-def sub_search(subnames, threshold, member_list, queue, has_filtered=True):
-    if (len(subnames) == 0) | (subnames[0] == ''):
+def sub_search(member_list, threshold, subguilds, maxchar, has_filtered=True):
+    queue = Queue()
+    url = "https://loawa.com/char/"
+    if (len(subguilds) == 0) | (subguilds[0] == ''):
         return
 
     driver = browser_driver()
-    length = len(subnames)
+    length = len(subguilds)
     for idx in range(length):
-        sub_name = subnames[idx].strip()
-        max_sub = int(maxsubs[idx].strip())
+        sub_name = subguilds[idx].strip()
+        max_sub = int(maxchar[idx].strip())
         if has_filtered:
             queue.put(f'--[{sub_name}] 템렙 {threshold} 미만 길드원 부캐 목록--\n')
         else:
@@ -188,7 +208,6 @@ def sub_search(subnames, threshold, member_list, queue, has_filtered=True):
             driver.get(url + i)
             driver.find_element(By.XPATH,
                                 '/ html / body / div[6] / div / div[2] / div / div / div[2] / div[2] / div / div[2] / div[1] / label[6]').click()
-            time.sleep(2)
 
             char_soup = BeautifulSoup(driver.page_source, 'html.parser')
 
@@ -219,6 +238,7 @@ def sub_search(subnames, threshold, member_list, queue, has_filtered=True):
         queue.put('\n')
     queue.put('\n')
     driver.quit()
+    return queue
 
 
 def browser_driver():
