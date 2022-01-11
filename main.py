@@ -4,6 +4,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait as stay
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from multiprocessing import Pool, Queue
 import multiprocessing
@@ -112,6 +114,7 @@ def enlist(guild_name, threshold, ignore, subguilds, maxchar, file):
     f = file
     driver = browser_driver()
     guild_url = "https://loawa.com/guild/"
+    print(guild_url + guild_name)
     driver.get(guild_url + guild_name)
     guild_soup = BeautifulSoup(driver.page_source, 'html.parser')
     member_list = guild_soup.find_all('table', {'class': 'tfs13'})
@@ -121,14 +124,16 @@ def enlist(guild_name, threshold, ignore, subguilds, maxchar, file):
     manager = multiprocessing.Manager()
     pool = Pool(processes=multiprocessing.cpu_count() * 2)
     filter_list = manager.list()
+    # filter_list=list()
     pass_list = manager.list()
+    # pass_list=list()
     func = partial(classify, threshold=threshold, ignore=ignore, filtered=filter_list, passed=pass_list)
     pool.map(func, member_list)
     pool.close()
     pool.join()
 
-    print(filter_list)
-    print(pass_list)
+    # print(filter_list)
+    # print(pass_list)
 
     count = 0
     for i in filter_list:
@@ -151,6 +156,9 @@ def enlist(guild_name, threshold, ignore, subguilds, maxchar, file):
     maxnums = manager.list()
     for num in maxchar:
         maxnums.append(num)
+
+    print('부캐길드명: ', subnames)
+    print('최대 개수: ', maxnums)
     pool = Pool(processes=multiprocessing.cpu_count() * 2)
     # sub_search(subnames, threshold, filter_list)
     func = partial(sub_search, threshold=threshold, subguilds=subnames, maxchar=maxnums)
@@ -184,6 +192,7 @@ def classify(raw_list, threshold, ignore, filtered, passed):
             dif = clevel - threshold
             if dif < 0:
                 filtered.append(cname)
+                print(cname, ': ', dif)
             else:
                 passed.append(cname)
 
@@ -193,8 +202,6 @@ def sub_search(member_list, threshold, subguilds, maxchar, has_filtered=True):
     url = "https://loawa.com/char/"
     if (len(subguilds) == 0) | (subguilds[0] == ''):
         return
-
-    driver = browser_driver()
     length = len(subguilds)
     for idx in range(length):
         sub_name = subguilds[idx].strip()
@@ -203,41 +210,37 @@ def sub_search(member_list, threshold, subguilds, maxchar, has_filtered=True):
             queue.put(f'--[{sub_name}] 템렙 {threshold} 미만 길드원 부캐 목록--\n')
         else:
             queue.put(f'--[{sub_name}] 부캐 {max_sub}개 초과 가입 길드원 목록--\n')
+        print(member_list)
 
-        for i in member_list:
-            driver.get(url + i)
-            driver.find_element(By.XPATH,
-                                '/ html / body / div[6] / div / div[2] / div / div / div[2] / div[2] / div / div[2] / div[1] / label[6]').click()
-
-            char_soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-            char_list = char_soup.find_all('table', {'class': 'tfs14'})
-
-            target_list = []
-
-            for j in char_list:
-                gname = j.find('span', {'class': 'tfs14 text-grade2'}).text.strip()
-                cname = j.find('span', {'class': 'text-theme-0 tfs14'}).text.strip()
-                if gname == sub_name:
-                    target_list.append(cname)
-
-            if has_filtered:
-                if len(target_list) > 0:
-
-                    temp_string = f'{i}: '
-                    for s in target_list:
-                        temp_string += f'{s}  '
-                    queue.put(temp_string + '\n')
-            else:
-                if len(target_list) > max_sub:
-
-                    temp_string = f'{i}: '
-                    for s in target_list:
-                        temp_string += f'{s}  '
-                    queue.put(temp_string + '\n')
+        driver = browser_driver()
+        driver.get(url + member_list)
+        # driver.find_element(By.XPATH, '/ html / body / div[6] / div / div[2] / div / div / div[2] / div[2] / div / div[2] / div[1] / label[6]').click()
+        stay(driver, 5).until(EC.element_to_be_clickable(
+            (By.XPATH, '/html/body/div[6]/div/div[2]/div/div/div[2]/div[2]/div/div[2]/div[1]/label[6]'))).click()
+        char_soup = BeautifulSoup(driver.page_source, 'html.parser')
+        driver.quit()
+        char_list = char_soup.find_all('table', {'class': 'tfs14'})
+        target_list = []
+        for j in char_list:
+            gname = j.find('span', {'class': 'tfs14 text-grade2'}).text.strip()
+            cname = j.find('span', {'class': 'text-theme-0 tfs14'}).text.strip()
+            if gname == sub_name:
+                target_list.append(cname)
+        if has_filtered:
+            if len(target_list) > 0:
+                temp_string = f'{member_list}: '
+                for s in target_list:
+                    temp_string += f'{s}  '
+                queue.put(temp_string + '\n')
+        else:
+            if len(target_list) > max_sub:
+                temp_string = f'{member_list}: '
+                for s in target_list:
+                    temp_string += f'{s}  '
+                queue.put(temp_string + '\n')
         queue.put('\n')
     queue.put('\n')
-    driver.quit()
+
     return queue
 
 
