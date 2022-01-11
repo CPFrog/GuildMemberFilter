@@ -1,4 +1,3 @@
-import itertools
 import time
 import sys
 from PyQt5.QtWidgets import *
@@ -6,7 +5,7 @@ from PyQt5.QtCore import Qt
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from multiprocessing import Pool
+from multiprocessing import Pool, Queue
 from functools import partial
 from bs4 import BeautifulSoup
 import chromedriver_autoinstaller
@@ -108,51 +107,70 @@ def enlist(guild_name, threshold, ignore, file):
     f.write(f'--[{guild_name}] 템 레벨 {threshold} 미만 길드원 명단--\n')
 
     pool = Pool(processes=8)
-    func = partial(classify, threshold=threshold, ignore=ignore, file=f)
+    filter_list = []
+    pass_list = []
+    func = partial(classify, threshold=threshold, ignore=ignore, filtered=filter_list, passed=pass_list)
     # TypeError: cannot pickle '_io.TextIOWrapper' object
-    filter_list, pass_list = pool.map(func, member_list)
+    pool.map(func, member_list)
     pool.close()
     pool.join()
 
+    print(filter_list)
+    print(pass_list)
+
+    count = 0
+    for i in filter_list:
+        f.write(i)
+        count += 1
+        if count == 5:
+            f.write('\n')
+            f.flush()
+            count = 0
+        else:
+            f.write('  ')
+    if not count == 0:
+        f.write('\n')
+    f.write('\n\n')
+    f.flush()
+
     pool = Pool(processes=8)
     # sub_search(subnames, threshold, filter_list)
-    func = partial(sub_search, threshold=threshold, subnames=subnames, file=f)
+    q = Queue()
+    func = partial(sub_search, threshold=threshold, subnames=subnames, queue=q)
     pool.map(func, filter_list)
+    pool.close()
+    pool.join()
+    while not q.empty():
+        f.write(q.pop(0))
+        f.flush()
     f.write('\n')
     f.flush()
-    func = partial(sub_search, threshold=threshold, subnames=subnames, file=f, has_filtered=False)
+
+    func = partial(sub_search, threshold=threshold, subnames=subnames, queue=q, has_filtered=False)
     pool.map(func, pass_list)
+    pool.close()
+    pool.join()
+    while not q.empty():
+        f.write(q.pop(0))
+        f.flush()
     # sub_search(subnames, threshold, pass_list, has_filtered=False)
 
     f.close()
 
 
-def classify(raw_list, threshold, ignore, file):
-    f = file
-    filter_list = []
-    pass_list = []
+def classify(raw_list, threshold, ignore, filtered, passed):
     for i in raw_list:
         cname = i.find('span', {'class': 'text-theme-0 tfs13'}).text.strip()
         clevel = float(i.find('span', {'class': 'text-grade5 tfs13'}).text)
         dif = clevel - threshold
         if dif < 0:
             if clevel >= ignore:
-                filter_list.append(cname)
-                f.write(f'{cname}')
-                if len(filter_list) % 5 == 0:
-                    f.write('\n')
-                    f.flush()
-                else:
-                    f.write('  ')
+                filtered.append(cname)
         else:
-            pass_list.append(cname)
-    f.write('\n\n\n')
-    f.flush()
-    return filter_list, pass_list
+            passed.append(cname)
 
 
-def sub_search(subnames, threshold, member_list, file, has_filtered=True):
-    f = file
+def sub_search(subnames, threshold, member_list, queue, has_filtered=True):
     if (len(subnames) == 0) | (subnames[0] == ''):
         return
 
@@ -162,11 +180,9 @@ def sub_search(subnames, threshold, member_list, file, has_filtered=True):
         sub_name = subnames[idx].strip()
         max_sub = int(maxsubs[idx].strip())
         if has_filtered:
-            f.write(f'--[{sub_name}] 템렙 {threshold} 미만 길드원 부캐 목록--\n')
+            queue.put(f'--[{sub_name}] 템렙 {threshold} 미만 길드원 부캐 목록--\n')
         else:
-            f.write(f'--[{sub_name}] 부캐 {max_sub}개 초과 가입 길드원 목록--\n')
-
-        f.flush()
+            queue.put(f'--[{sub_name}] 부캐 {max_sub}개 초과 가입 길드원 목록--\n')
 
         for i in member_list:
             driver.get(url + i)
@@ -189,22 +205,19 @@ def sub_search(subnames, threshold, member_list, file, has_filtered=True):
             if has_filtered:
                 if len(target_list) > 0:
 
-                    f.write(f'{i}: ')
+                    temp_string = f'{i}: '
                     for s in target_list:
-                        f.write(f'{s}  ')
-                    f.write('\n')
+                        temp_string += f'{s}  '
+                    queue.put(temp_string + '\n')
             else:
                 if len(target_list) > max_sub:
 
-                    f.write(f'{i}: ')
+                    temp_string = f'{i}: '
                     for s in target_list:
-                        f.write(f'{s}  ')
-                    f.write('\n')
-            f.flush()
-        f.write('\n')
-        f.flush()
-    f.write('\n')
-    f.flush()
+                        temp_string += f'{s}  '
+                    queue.put(temp_string + '\n')
+        queue.put('\n')
+    queue.put('\n')
     driver.quit()
 
 
@@ -219,19 +232,23 @@ def browser_driver():
     if browser == 0:
         options = webdriver.ChromeOptions()  # 옵션 생성
         options.add_argument("--headless")  # 창 숨기는 옵션 추가
+        dc = DesiredCapabilities.CHROME.copy()
+        dc['loggingPrefs'] = {'driver': 'OFF', 'server': 'OFF', 'browser': 'OFF'}
         try:
-            driver = webdriver.Chrome(f'./{driver_ver}/chromedriver', options=options)
+            driver = webdriver.Chrome(f'./{driver_ver}/chromedriver', options=options, desired_capabilities=dc)
         except:
             chromedriver_autoinstaller.install(True)
-            driver = webdriver.Chrome(f'./{driver_ver}/chromedriver', options=options)
+            driver = webdriver.Chrome(f'./{driver_ver}/chromedriver', options=options, desired_capabilities=dc)
     elif browser == 1:
         options = webdriver.EdgeOptions()  # 옵션 생성
         options.add_argument("--headless")  # 창 숨기는 옵션 추가
+        dc = DesiredCapabilities.EDGE.copy()
+        dc['loggingPrefs'] = {'driver': 'OFF', 'server': 'OFF', 'browser': 'OFF'}
         try:
-            driver = webdriver.Edge(f'./{driver_ver}/msedgedriver', options=options)
+            driver = webdriver.Edge(f'./{driver_ver}/msedgedriver', options=options, capabilities=dc)
         except:
             edgedriver_autoinstaller.install(True)
-            driver = webdriver.Edge(f'./{driver_ver}/msedgedriver', options=options)
+            driver = webdriver.Edge(f'./{driver_ver}/msedgedriver', options=options, capabilities=dc)
 
     return driver
 
