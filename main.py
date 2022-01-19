@@ -165,7 +165,7 @@ def enlist(guild_name, threshold, ignore, subguilds, maxchar, file):
     q = pool.map(func, filter_list)
     pool.close()
     pool.join()
-    while not q.empty():
+    while not len(q) == 0:
         f.write(q.pop(0))
         f.flush()
     f.write('\n')
